@@ -1,2 +1,3 @@
 :HL["/_next/static/chunks/3b1yokyep_ayy.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"slug","param":{"type":"c","key":"capabilities/physical-infrastructure-control","siblings":[]},"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"AsxGCVZrJKPNXngwnNvqc"}
+:HL["/_next/static/chunks/0s_2lr8elxc5j.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"slug","param":{"type":"c","key":"capabilities/physical-infrastructure-control","siblings":[]},"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"iDUtpKJQHv-g_EvoK7bWY"}
