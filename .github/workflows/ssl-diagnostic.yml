@@ -1,4 +1,4 @@
-name: SnapSpace SSL diagnostic
+name: SnapSpace Pages TLS repair
 
 on:
   push:
@@ -7,25 +7,34 @@ on:
 
 permissions:
   contents: read
-  pages: read
+  pages: write
 
 jobs:
-  diagnose:
+  repair:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Pages API state
+      - name: Request Pages rebuild and HTTPS
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          set -u
+          echo '=== BEFORE ==='
           gh api repos/${GITHUB_REPOSITORY}/pages || true
-      - name: TLS state
+          echo '=== REBUILD ==='
+          gh api --method POST repos/${GITHUB_REPOSITORY}/pages/builds || true
+          sleep 15
+          echo '=== ENABLE HTTPS ==='
+          printf '%s' '{"https_enforced":true}' | gh api --method PUT repos/${GITHUB_REPOSITORY}/pages --input - || true
+          echo '=== AFTER ==='
+          gh api repos/${GITHUB_REPOSITORY}/pages || true
+      - name: Verify TLS
         shell: bash
         run: |
-          set -u
-          DOMAIN="snapspace.click"
+          DOMAIN='snapspace.click'
           echo "A:"; dig +short "$DOMAIN" A || true
+          curl -sSI --max-time 20 "https://$DOMAIN/" || true
           timeout 20 openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" -showcerts </dev/null 2>/tmp/tls.err | awk '/BEGIN CERTIFICATE/{flag=1} flag{print} /END CERTIFICATE/{exit}' > /tmp/leaf.pem || true
           cat /tmp/tls.err || true
           if grep -q 'BEGIN CERTIFICATE' /tmp/leaf.pem; then openssl x509 -in /tmp/leaf.pem -noout -subject -issuer -dates -ext subjectAltName || true; fi
