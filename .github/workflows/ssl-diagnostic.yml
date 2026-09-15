@@ -1,4 +1,4 @@
-name: SnapSpace Pages TLS repair
+name: SnapSpace Pages TLS verify
 
 on:
   push:
@@ -7,34 +7,27 @@ on:
 
 permissions:
   contents: read
-  pages: write
+  pages: read
 
 jobs:
-  repair:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Request Pages rebuild and HTTPS
+      - name: Wait for Pages rebuild
+        run: sleep 30
+      - name: Verify Pages and TLS
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -u
-          echo '=== BEFORE ==='
+          echo '=== LATEST BUILD ==='
+          gh api repos/${GITHUB_REPOSITORY}/pages/builds/latest || true
+          echo '=== PAGES ==='
           gh api repos/${GITHUB_REPOSITORY}/pages || true
-          echo '=== REBUILD ==='
-          gh api --method POST repos/${GITHUB_REPOSITORY}/pages/builds || true
-          sleep 15
-          echo '=== ENABLE HTTPS ==='
-          printf '%s' '{"https_enforced":true}' | gh api --method PUT repos/${GITHUB_REPOSITORY}/pages --input - || true
-          echo '=== AFTER ==='
-          gh api repos/${GITHUB_REPOSITORY}/pages || true
-      - name: Verify TLS
-        shell: bash
-        run: |
-          DOMAIN='snapspace.click'
-          echo "A:"; dig +short "$DOMAIN" A || true
-          curl -sSI --max-time 20 "https://$DOMAIN/" || true
-          timeout 20 openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" -showcerts </dev/null 2>/tmp/tls.err | awk '/BEGIN CERTIFICATE/{flag=1} flag{print} /END CERTIFICATE/{exit}' > /tmp/leaf.pem || true
+          echo '=== HTTPS ==='
+          curl -sSI --max-time 20 https://snapspace.click/ || true
+          timeout 20 openssl s_client -connect snapspace.click:443 -servername snapspace.click -showcerts </dev/null 2>/tmp/tls.err | awk '/BEGIN CERTIFICATE/{flag=1} flag{print} /END CERTIFICATE/{exit}' > /tmp/leaf.pem || true
           cat /tmp/tls.err || true
           if grep -q 'BEGIN CERTIFICATE' /tmp/leaf.pem; then openssl x509 -in /tmp/leaf.pem -noout -subject -issuer -dates -ext subjectAltName || true; fi
