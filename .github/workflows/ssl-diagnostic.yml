@@ -1,4 +1,4 @@
-name: SnapSpace Pages TLS verify
+name: SnapSpace Pages reset verify
 
 on:
   push:
@@ -14,20 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Wait for Pages rebuild
-        run: sleep 30
-      - name: Verify Pages and TLS
+      - name: Wait for reset build
+        run: sleep 45
+      - name: Verify Pages reset state
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: bash
         run: |
-          set -u
-          echo '=== LATEST BUILD ==='
-          gh api repos/${GITHUB_REPOSITORY}/pages/builds/latest || true
-          echo '=== PAGES ==='
           gh api repos/${GITHUB_REPOSITORY}/pages || true
-          echo '=== HTTPS ==='
-          curl -sSI --max-time 20 https://snapspace.click/ || true
-          timeout 20 openssl s_client -connect snapspace.click:443 -servername snapspace.click -showcerts </dev/null 2>/tmp/tls.err | awk '/BEGIN CERTIFICATE/{flag=1} flag{print} /END CERTIFICATE/{exit}' > /tmp/leaf.pem || true
-          cat /tmp/tls.err || true
-          if grep -q 'BEGIN CERTIFICATE' /tmp/leaf.pem; then openssl x509 -in /tmp/leaf.pem -noout -subject -issuer -dates -ext subjectAltName || true; fi
+          gh api repos/${GITHUB_REPOSITORY}/pages/builds/latest || true
