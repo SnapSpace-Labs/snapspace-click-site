@@ -1,9 +1,9 @@
 name: SnapSpace SSL diagnostic
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - test/pages-rebuild-20260916
 
 permissions:
   contents: read
@@ -13,65 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: DNS TLS and Pages diagnostics
+      - name: Pages API state
+        shell: bash
+        run: |
+          curl -sS -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2026-03-10' "https://api.github.com/repos/${GITHUB_REPOSITORY}/pages" || true
+      - name: TLS state
         shell: bash
         run: |
           set -u
           DOMAIN="snapspace.click"
-          ORIGIN="snapspace-labs.github.io"
-
-          echo "=== UTC ==="
-          date -u
-
-          echo "=== DNS via runner resolver ==="
           echo "A:"; dig +short "$DOMAIN" A || true
-          echo "AAAA:"; dig +short "$DOMAIN" AAAA || true
-          echo "CNAME:"; dig +short "$DOMAIN" CNAME || true
-          echo "NS:"; dig +short "$DOMAIN" NS || true
-          echo "SOA:"; dig +short "$DOMAIN" SOA || true
-          echo "CAA:"; dig +short "$DOMAIN" CAA || true
-
-          for RESOLVER in 1.1.1.1 8.8.8.8; do
-            echo "=== DNS via ${RESOLVER} ==="
-            echo "A:"; dig @"$RESOLVER" +short "$DOMAIN" A || true
-            echo "AAAA:"; dig @"$RESOLVER" +short "$DOMAIN" AAAA || true
-            echo "CNAME:"; dig @"$RESOLVER" +short "$DOMAIN" CNAME || true
-          done
-
-          echo "=== WWW DNS ==="
-          echo "CNAME:"; dig +short "www.$DOMAIN" CNAME || true
-          echo "A:"; dig +short "www.$DOMAIN" A || true
-          echo "AAAA:"; dig +short "www.$DOMAIN" AAAA || true
-
-          echo "=== TLS certificate through normal DNS ==="
-          timeout 20 openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" -showcerts </dev/null 2>&1 | tee /tmp/sclient.txt || true
-          awk '/BEGIN CERTIFICATE/{flag=1} flag{print} /END CERTIFICATE/{exit}' /tmp/sclient.txt > /tmp/leaf.pem || true
-          if grep -q 'BEGIN CERTIFICATE' /tmp/leaf.pem; then
-            openssl x509 -in /tmp/leaf.pem -noout -subject -issuer -serial -dates -fingerprint -sha256 -ext subjectAltName || true
-          fi
-
-          echo "=== HTTPS request ==="
-          curl -svI --max-time 20 "https://$DOMAIN/" 2>&1 || true
-
-          echo "=== HTTP request ==="
-          curl -svI --max-time 20 "http://$DOMAIN/" 2>&1 || true
-
-          echo "=== GitHub Pages origin ==="
-          echo "Origin DNS:"; dig +short "$ORIGIN" A || true
-          curl -svI --max-time 20 "https://$ORIGIN/snapspace-click-site/" 2>&1 || true
-
-          echo "=== Certificate per resolved IPv4 with snapspace.click SNI ==="
-          mapfile -t IPS < <(dig @1.1.1.1 +short "$DOMAIN" A | sort -u)
-          for IP in "${IPS[@]}"; do
-            echo "--- $IP ---"
-            timeout 15 openssl s_client -connect "$IP:443" -servername "$DOMAIN" -showcerts </dev/null 2>/tmp/ip.err | awk '/BEGIN CERTIFICATE/{flag=1} flag{print} /END CERTIFICATE/{exit}' > /tmp/ip.pem || true
-            cat /tmp/ip.err || true
-            if grep -q 'BEGIN CERTIFICATE' /tmp/ip.pem; then
-              openssl x509 -in /tmp/ip.pem -noout -subject -issuer -dates -fingerprint -sha256 -ext subjectAltName || true
-            fi
-          done
-
-          echo "=== Expected GitHub Pages apex IPv4 set ==="
-          printf '%s\n' 185.199.108.153 185.199.109.153 185.199.110.153 185.199.111.153
-
-          echo "=== End diagnostic ==="
+          timeout 20 openssl s_client -connect "$DOMAIN:443" -servername "$DOMAIN" -showcerts </dev/null 2>/tmp/tls.err | awk '/BEGIN CERTIFICATE/{flag=1} flag{print} /END CERTIFICATE/{exit}' > /tmp/leaf.pem || true
+          cat /tmp/tls.err || true
+          if grep -q 'BEGIN CERTIFICATE' /tmp/leaf.pem; then openssl x509 -in /tmp/leaf.pem -noout -subject -issuer -dates -ext subjectAltName || true; fi
