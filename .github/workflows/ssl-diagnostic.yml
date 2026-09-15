@@ -1,4 +1,4 @@
-name: SnapSpace Pages reset verify
+name: SnapSpace TLS provisioning verify
 
 on:
   push:
@@ -12,13 +12,28 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
-      - name: Wait for reset build
-        run: sleep 45
-      - name: Verify Pages reset state
+      - name: Wait for custom-domain certificate
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          gh api repos/${GITHUB_REPOSITORY}/pages || true
-          gh api repos/${GITHUB_REPOSITORY}/pages/builds/latest || true
+          set -u
+          for n in $(seq 1 16); do
+            echo "=== CHECK $n ==="
+            gh api repos/${GITHUB_REPOSITORY}/pages || true
+            timeout 15 openssl s_client -connect snapspace.click:443 -servername snapspace.click -showcerts </dev/null 2>/tmp/tls.err | awk '/BEGIN CERTIFICATE/{flag=1} flag{print} /END CERTIFICATE/{exit}' > /tmp/leaf.pem || true
+            cat /tmp/tls.err || true
+            if grep -q 'BEGIN CERTIFICATE' /tmp/leaf.pem; then
+              openssl x509 -in /tmp/leaf.pem -noout -subject -issuer -dates -ext subjectAltName || true
+              if openssl x509 -in /tmp/leaf.pem -noout -ext subjectAltName | grep -q 'DNS:snapspace.click'; then
+                echo 'CUSTOM_DOMAIN_CERT_READY'
+                curl -sSI --max-time 20 https://snapspace.click/
+                exit 0
+              fi
+            fi
+            sleep 30
+          done
+          echo 'CUSTOM_DOMAIN_CERT_NOT_READY'
+          exit 1
