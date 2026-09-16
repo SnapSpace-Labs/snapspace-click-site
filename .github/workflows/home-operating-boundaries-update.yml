@@ -1,0 +1,69 @@
+name: Update homepage operating boundaries
+
+on:
+  push:
+    branches:
+      - ops/home-operating-boundaries-hardware-20260916
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout production main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Update data-center / hardware wording
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          files = [Path('index.html'), Path('__next.__PAGE__.txt'), Path('__next._full.txt')]
+          old_title = 'Distributed compute'
+          new_title = 'Data centers and compute hardware'
+          old_copy = 'Admission, state identity, multi-kernel control and real-GPU reference'
+          new_copy = 'Workload admission, state identity, multi-kernel control and bounded real-GPU reference'
+
+          title_hits = 0
+          copy_hits = 0
+          changed = []
+
+          for path in files:
+              if not path.exists():
+                  continue
+              text = path.read_text(encoding='utf-8')
+              t = text.count(old_title)
+              c = text.count(old_copy)
+              if t or c:
+                  text = text.replace(old_title, new_title).replace(old_copy, new_copy)
+                  path.write_text(text, encoding='utf-8')
+                  changed.append(str(path))
+                  title_hits += t
+                  copy_hits += c
+
+          if title_hits == 0 or copy_hits == 0:
+              raise SystemExit(f'Expected homepage text not found: title_hits={title_hits}, copy_hits={copy_hits}')
+
+          print(f'updated={changed}')
+          print(f'title_hits={title_hits} copy_hits={copy_hits}')
+          PY
+
+          grep -F "Data centers and compute hardware" index.html >/dev/null
+          grep -F "bounded real-GPU reference" index.html >/dev/null
+
+      - name: Commit and deploy to main
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html __next.__PAGE__.txt __next._full.txt
+          git diff --cached --quiet && { echo "No change to deploy"; exit 1; }
+          git commit -m "site: surface data centers and compute hardware"
+          git push origin HEAD:main
