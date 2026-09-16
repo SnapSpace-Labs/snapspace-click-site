@@ -1,0 +1,25 @@
+name: Verify live homepage copy
+
+on:
+  push:
+    branches:
+      - verify/live-home-copy-20260916
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check live homepage content
+        shell: bash
+        run: |
+          set -eu
+          URL="https://snapspace.click/?verify=${GITHUB_SHA}"
+          body="$(curl -fsSL --max-time 20 -H 'Cache-Control: no-cache' "$URL")"
+          printf '%s' "$body" | grep -F "Data centers and compute hardware"
+          printf '%s' "$body" | grep -F "Workload admission, state identity, multi-kernel control and bounded real-GPU reference"
+          if printf '%s' "$body" | grep -Fq "<h3>Distributed compute</h3>"; then
+            echo "OLD_COPY_STILL_PRESENT"
+            exit 1
+          fi
+          echo "LIVE_COPY_VERIFIED"
