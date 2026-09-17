@@ -1,0 +1,156 @@
+name: Full public-site audit
+
+on:
+  push:
+    branches:
+      - audit/full-site-20260917
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Crawl live site and audit HTML
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p audit/screens
+          cat > audit/audit.py <<'PY'
+          import re, sys, urllib.request, urllib.parse
+          from html.parser import HTMLParser
+          from collections import Counter
+
+          BASE='https://snapspace.click'
+          seed=['/','/platform/','/proof/','/architecture/','/domains/','/developers/','/research/','/company/','/evidence/','/applications/','/capabilities/','/academia/','/resources/']
+          headers={'User-Agent':'SnapSpace-Site-Audit/2026-09-17','Cache-Control':'no-cache'}
+
+          class P(HTMLParser):
+              def __init__(self):
+                  super().__init__(); self.links=[]; self.title=''; self.in_title=False; self.h1=[]; self.in_h1=False; self._h1=''; self.meta_desc=[]; self.canonical=[]; self.lang=None; self.viewport=[]; self.images=[]; self.buttons=0; self.forms=0
+              def handle_starttag(self, tag, attrs):
+                  d=dict(attrs)
+                  if tag=='html': self.lang=d.get('lang')
+                  if tag=='title': self.in_title=True
+                  if tag=='h1': self.in_h1=True; self._h1=''
+                  if tag=='a' and d.get('href'): self.links.append(d['href'])
+                  if tag=='meta' and d.get('name','').lower()=='description': self.meta_desc.append(d.get('content',''))
+                  if tag=='meta' and d.get('name','').lower()=='viewport': self.viewport.append(d.get('content',''))
+                  if tag=='link' and d.get('rel','').lower()=='canonical': self.canonical.append(d.get('href',''))
+                  if tag=='img': self.images.append((d.get('src'), d.get('alt')))
+                  if tag=='button': self.buttons+=1
+                  if tag=='form': self.forms+=1
+              def handle_endtag(self,tag):
+                  if tag=='title': self.in_title=False
+                  if tag=='h1': self.in_h1=False; self.h1.append(' '.join(self._h1.split()))
+              def handle_data(self,data):
+                  if self.in_title: self.title += data
+                  if self.in_h1: self._h1 += data
+
+          def fetch(url):
+              req=urllib.request.Request(url,headers=headers)
+              with urllib.request.urlopen(req,timeout=20) as r:
+                  return r.status, r.geturl(), r.read().decode('utf-8','replace'), dict(r.headers)
+
+          pages={}; failures=[]; discovered=set(seed)
+          for path in list(seed):
+              url=urllib.parse.urljoin(BASE,path)
+              try:
+                  status, final, body, hdr=fetch(url)
+                  p=P(); p.feed(body)
+                  pages[path]=(status,final,p,body,hdr)
+                  for href in p.links:
+                      u=urllib.parse.urljoin(final,href)
+                      pu=urllib.parse.urlparse(u)
+                      if pu.netloc in ('snapspace.click','www.snapspace.click'):
+                          x=pu.path or '/'
+                          if x.endswith(('.pdf','.md','.txt','.xml','.ico','.js','.css')): continue
+                          discovered.add(x)
+              except Exception as e: failures.append((path,repr(e)))
+
+          # Check all discovered internal routes once.
+          checked={}
+          for path in sorted(discovered):
+              try:
+                  status, final, body, hdr=fetch(urllib.parse.urljoin(BASE,path))
+                  checked[path]=(status,final)
+              except Exception as e:
+                  checked[path]=('ERROR',repr(e))
+
+          print('=== SNAPSPACE LIVE SITE AUDIT ===')
+          print('BASE',BASE)
+          print('SEED_PAGES',len(seed),'DISCOVERED_INTERNAL',len(discovered))
+          if failures: print('FETCH_FAILURES',failures)
+          print('\n=== PAGE METADATA ===')
+          titles=[]; canon=[]
+          issues=[]
+          for path,(status,final,p,body,hdr) in pages.items():
+              t=' '.join(p.title.split())
+              print(path,'status=',status,'title=',repr(t),'h1=',p.h1,'desc=',len(p.meta_desc),'canonical=',p.canonical,'lang=',p.lang,'viewport=',p.viewport)
+              titles.append((path,t)); canon.extend((path,x) for x in p.canonical)
+              if status!=200: issues.append((path,'non-200',status))
+              if not t: issues.append((path,'missing title'))
+              if len(p.h1)!=1: issues.append((path,'h1 count',len(p.h1)))
+              if len(p.meta_desc)!=1 or not p.meta_desc[0].strip(): issues.append((path,'meta description count',len(p.meta_desc)))
+              if len(p.canonical)!=1: issues.append((path,'canonical count',len(p.canonical)))
+              else:
+                  expected=BASE + (path if path.startswith('/') else '/'+path)
+                  if not expected.endswith('/'): expected += '/'
+                  if p.canonical[0] != expected: issues.append((path,'canonical mismatch',p.canonical[0],expected))
+              if p.lang!='en': issues.append((path,'html lang',p.lang))
+              if not p.viewport: issues.append((path,'missing viewport'))
+              for src,alt in p.images:
+                  if alt is None: issues.append((path,'image missing alt',src))
+          dup_titles={t:[p for p,x in titles if x==t] for t,c in Counter(x for _,x in titles).items() if t and c>1}
+          if dup_titles: issues.append(('global','duplicate titles',dup_titles))
+
+          print('\n=== INTERNAL ROUTES ===')
+          broken=[]
+          for path,v in checked.items():
+              print(path,v)
+              if v[0] != 200: broken.append((path,v))
+          if broken: issues.append(('global','broken internal routes',broken))
+
+          print('\n=== CONTENT SANITY ===')
+          home=pages['/'][3]
+          required=['ALLOW / DENY / ESCALATE','STOP is separate.','Data centers and compute hardware','Workload admission, state identity, multi-kernel control and bounded real-GPU reference','409,600 / 15','48 / 48 + 9 / 9','32 / 32 ×2','58 / 58 ×2','40 / 40 → 44 / 44','20 / 20 ×2']
+          for s in required:
+              ok=s in home
+              print(('PASS' if ok else 'FAIL'),repr(s))
+              if not ok: issues.append(('/','missing expected public claim',s))
+          forbidden=['<h3>Distributed compute</h3>','REFUSE','FREEZE / HOLD']
+          for s in forbidden:
+              if s in home: issues.append(('/','stale/forbidden homepage wording',s))
+
+          print('\n=== ISSUES ===')
+          if not issues:
+              print('NONE_FROM_MECHANICAL_HTML_AUDIT')
+          else:
+              for x in issues: print('ISSUE',x)
+          print('AUDIT_ISSUE_COUNT',len(issues))
+          PY
+          python3 audit/audit.py | tee audit/report.txt
+
+      - name: Capture responsive screenshots
+        shell: bash
+        run: |
+          set -eu
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          echo "CHROME=$CHROME" | tee audit/chrome.txt
+          if [ -z "$CHROME" ]; then
+            echo "NO_CHROME_AVAILABLE" | tee -a audit/chrome.txt
+            exit 0
+          fi
+          for spec in mobile:390,844 tablet:768,1024 desktop:1440,900; do
+            name="${spec%%:*}"; dims="${spec#*:}"
+            "$CHROME" --headless --no-sandbox --disable-gpu --hide-scrollbars --window-size="$dims" --screenshot="audit/screens/${name}.png" "https://snapspace.click/?audit=20260917-${name}" >/tmp/chrome-${name}.log 2>&1 || { cat /tmp/chrome-${name}.log; exit 1; }
+            file "audit/screens/${name}.png"
+          done
+
+      - name: Upload audit package
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapspace-full-site-audit-20260917
+          path: audit/
+          if-no-files-found: error
