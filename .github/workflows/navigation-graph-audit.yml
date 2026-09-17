@@ -1,0 +1,95 @@
+name: Internal navigation graph audit
+
+on:
+  push:
+    branches:
+      - audit/full-site-20260917
+
+permissions:
+  contents: read
+
+jobs:
+  navigation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build internal route graph
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p audit-nav
+          python3 - <<'PY' | tee audit-nav/navigation.txt
+          import os, re, urllib.parse, xml.etree.ElementTree as ET
+          from html.parser import HTMLParser
+          from collections import deque
+
+          EXCLUDE_PREFIXES=('_next/','_not-found/','404/')
+          class P(HTMLParser):
+              def __init__(self): super().__init__(); self.links=[]
+              def handle_starttag(self,tag,attrs):
+                  if tag=='a':
+                      d=dict(attrs); h=d.get('href')
+                      if h: self.links.append(h)
+
+          def route_for(path):
+              path=path.replace('\\','/')
+              if path=='index.html': return '/'
+              if path.endswith('/index.html'): return '/'+path[:-10].strip('/')+'/'
+              return None
+
+          pages={}
+          for root,dirs,files in os.walk('.'):
+              relroot=os.path.relpath(root,'.').replace('\\','/')
+              if relroot=='.': relroot=''
+              if any(relroot.startswith(x.rstrip('/')) for x in EXCLUDE_PREFIXES): continue
+              if 'index.html' not in files: continue
+              rel=(relroot+'/' if relroot else '')+'index.html'
+              route=route_for(rel)
+              if route: pages[route]=rel
+
+          graph={r:set() for r in pages}
+          for route,path in pages.items():
+              p=P(); p.feed(open(path,encoding='utf-8').read())
+              for href in p.links:
+                  u=urllib.parse.urlparse(href)
+                  if u.scheme and u.scheme not in ('http','https'): continue
+                  if u.netloc and u.netloc not in ('snapspace.click','www.snapspace.click'): continue
+                  h=u.path
+                  if not h: continue
+                  if not h.startswith('/'):
+                      h=urllib.parse.urljoin(route,h)
+                  if h.endswith('index.html'): h=h[:-10]
+                  if '.' in h.rsplit('/',1)[-1]: continue
+                  if not h.endswith('/'): h+='/'
+                  if h in pages: graph[route].add(h)
+
+          seen={'/'}; q=deque(['/'])
+          while q:
+              r=q.popleft()
+              for t in graph.get(r,()):
+                  if t not in seen: seen.add(t); q.append(t)
+          unreachable=sorted(set(pages)-seen)
+          inbound={r:0 for r in pages}
+          for s,targets in graph.items():
+              for t in targets: inbound[t]+=1
+          zero_inbound=sorted(r for r,n in inbound.items() if n==0 and r!='/')
+
+          print('PAGE_COUNT',len(pages))
+          print('REACHABLE_FROM_HOME',len(seen))
+          print('UNREACHABLE_FROM_HOME',unreachable)
+          print('ZERO_INBOUND',zero_inbound)
+          print('\nGRAPH')
+          for r in sorted(graph): print(r,'->',sorted(graph[r]))
+
+          sitemap=set()
+          if os.path.exists('sitemap.xml'):
+              txt=open('sitemap.xml',encoding='utf-8').read()
+              sitemap=set(re.findall(r'<loc>https://snapspace\.click([^<]*)</loc>',txt))
+              sitemap={x if x.endswith('/') else x+'/' for x in sitemap}
+              print('\nSITEMAP_MISSING_ROUTES',sorted(set(pages)-sitemap))
+              print('SITEMAP_UNKNOWN_ROUTES',sorted(sitemap-set(pages)))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapspace-navigation-audit-20260917
+          path: audit-nav/
