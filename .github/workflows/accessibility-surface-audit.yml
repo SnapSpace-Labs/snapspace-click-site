@@ -1,0 +1,39 @@
+name: Accessibility surface audit
+
+on:
+  push:
+    branches:
+      - audit/full-site-20260917
+
+permissions:
+  contents: read
+
+jobs:
+  accessibility:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check accessible names, heading order and mobile targets
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p audit-a11y
+          cat > audit-a11y/audit.mjs <<'JS'
+          import {spawn} from 'node:child_process'; import fs from 'node:fs';
+          const chrome='/usr/bin/google-chrome';
+          const p=spawn(chrome,['--headless','--no-sandbox','--disable-gpu','--remote-debugging-port=9223','--user-data-dir=/tmp/ss-a11y','about:blank'],{stdio:'ignore'});
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          for(let i=0;i<50;i++){try{if((await fetch('http://127.0.0.1:9223/json/version')).ok)break}catch{} await sleep(100)}
+          async function target(){return (await fetch('http://127.0.0.1:9223/json/new?about:blank',{method:'PUT'})).json()}
+          async function run(wsUrl,fn){const ws=new WebSocket(wsUrl);await new Promise((r,j)=>{ws.onopen=r;ws.onerror=j});let id=1;const m=new Map();const ev=[];ws.onmessage=e=>{const x=JSON.parse(e.data);if(x.id&&m.has(x.id)){const q=m.get(x.id);m.delete(x.id);x.error?q.j(x.error):q.r(x.result)}else if(x.method){for(const q of ev.filter(q=>q.n===x.method))q.r(x.params)}};const send=(method,params={})=>new Promise((r,j)=>{const i=id++;m.set(i,{r,j});ws.send(JSON.stringify({id:i,method,params}))});const once=n=>new Promise(r=>ev.push({n,r}));try{return await fn(send,once)}finally{ws.close()}}
+          const pages=['/','/platform/','/proof/','/architecture/','/domains/','/developers/','/research/','/company/','/evidence/','/applications/','/capabilities/','/academia/','/resources/'];
+          const report=[];
+          for(const path of pages){const t=await target();const v=await run(t.webSocketDebuggerUrl,async(send,once)=>{await send('Page.enable');await send('Runtime.enable');await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});const loaded=once('Page.loadEventFired');await send('Page.navigate',{url:`https://snapspace.click${path}?a11yAudit=20260917`});await loaded;await sleep(200);const expr=`(()=>{const visible=e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0};const name=e=>(e.getAttribute('aria-label')||e.textContent||e.getAttribute('title')||'').trim().replace(/\\s+/g,' ');const unnamed=[...document.querySelectorAll('a,button,input,select,textarea')].filter(e=>visible(e)&&!name(e)).map(e=>({tag:e.tagName,html:e.outerHTML.slice(0,180)}));const small=[...document.querySelectorAll('a,button')].filter(visible).map(e=>{const r=e.getBoundingClientRect();return {tag:e.tagName,name:name(e).slice(0,80),w:Math.round(r.width),h:Math.round(r.height)}}).filter(x=>x.w<36||x.h<36);const hs=[...document.querySelectorAll('h1,h2,h3,h4,h5,h6')].filter(visible).map(e=>({level:Number(e.tagName[1]),text:e.textContent.trim().replace(/\\s+/g,' ').slice(0,100)}));const jumps=[];for(let i=1;i<hs.length;i++)if(hs[i].level>hs[i-1].level+1)jumps.push({from:hs[i-1],to:hs[i]});const ids=[...document.querySelectorAll('[id]')].map(e=>e.id).filter(Boolean),dups=[...new Set(ids.filter((x,i)=>ids.indexOf(x)!==i))];return {unnamed,small,headingJumps:jumps,duplicateIds:dups};})()`;return (await send('Runtime.evaluate',{expression:expr,returnByValue:true})).result.value});report.push({path,...v});console.log(path,'UNNAMED',v.unnamed.length,'SMALL',v.small.length,'HEADING_JUMPS',v.headingJumps.length,'DUP_IDS',v.duplicateIds.length);if(v.unnamed.length)console.log(' unnamed',JSON.stringify(v.unnamed));if(v.small.length)console.log(' small',JSON.stringify(v.small.slice(0,20)));if(v.headingJumps.length)console.log(' jumps',JSON.stringify(v.headingJumps));if(v.duplicateIds.length)console.log(' dupids',JSON.stringify(v.duplicateIds));await fetch(`http://127.0.0.1:9223/json/close/${t.id}`)}
+          fs.writeFileSync('audit-a11y/report.json',JSON.stringify(report,null,2));
+          const counts={unnamed:report.reduce((a,x)=>a+x.unnamed.length,0),small:report.reduce((a,x)=>a+x.small.length,0),headingJumps:report.reduce((a,x)=>a+x.headingJumps.length,0),duplicateIds:report.reduce((a,x)=>a+x.duplicateIds.length,0)};fs.writeFileSync('audit-a11y/summary.txt',JSON.stringify(counts,null,2)+'\n');console.log('TOTALS',JSON.stringify(counts));p.kill('SIGTERM');
+          JS
+          node audit-a11y/audit.mjs
+          cat audit-a11y/summary.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snapspace-accessibility-audit-20260917
+          path: audit-a11y/
