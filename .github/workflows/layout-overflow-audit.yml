@@ -1,0 +1,103 @@
+name: Responsive DOM overflow audit
+
+on:
+  push:
+    branches:
+      - audit/full-site-20260917
+
+permissions:
+  contents: read
+
+jobs:
+  layout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Audit responsive DOM overflow
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p audit-layout
+          cat > audit-layout/layout.mjs <<'JS'
+          import {spawn} from 'node:child_process';
+          import fs from 'node:fs';
+
+          const chrome = '/usr/bin/google-chrome';
+          const proc = spawn(chrome,[
+            '--headless','--no-sandbox','--disable-gpu','--hide-scrollbars',
+            '--remote-debugging-port=9222','--user-data-dir=/tmp/snapspace-layout-audit','about:blank'
+          ],{stdio:'ignore'});
+
+          const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          for(let i=0;i<50;i++){
+            try{const r=await fetch('http://127.0.0.1:9222/json/version'); if(r.ok) break;}catch{}
+            await sleep(100);
+          }
+
+          async function cdp(wsUrl, work){
+            const ws=new WebSocket(wsUrl); let next=1; const pending=new Map(); const events=[];
+            await new Promise((res,rej)=>{ws.onopen=res; ws.onerror=rej});
+            ws.onmessage=e=>{const m=JSON.parse(e.data); if(m.id&&pending.has(m.id)){const {res,rej}=pending.get(m.id);pending.delete(m.id);m.error?rej(m.error):res(m.result)} else if(m.method){for(const f of events.filter(x=>x.method===m.method)) f.res(m.params);}};
+            const send=(method,params={})=>new Promise((res,rej)=>{const id=next++; pending.set(id,{res,rej}); ws.send(JSON.stringify({id,method,params}));});
+            const once=method=>new Promise(res=>events.push({method,res}));
+            try{return await work(send,once);} finally{ws.close();}
+          }
+
+          async function openTarget(){
+            const r=await fetch('http://127.0.0.1:9222/json/new?about:blank',{method:'PUT'});
+            if(!r.ok) throw new Error(`target create ${r.status}`);
+            return r.json();
+          }
+
+          const pages=['/','/platform/','/proof/','/architecture/','/domains/','/developers/','/research/','/company/','/evidence/','/applications/','/capabilities/','/academia/','/resources/'];
+          const views=[['mobile',390,844],['tablet',768,1024],['desktop',1440,900]];
+          const report=[];
+          for(const [view,width,height] of views){
+            for(const path of pages){
+              const target=await openTarget();
+              const result=await cdp(target.webSocketDebuggerUrl,async(send,once)=>{
+                await send('Page.enable');
+                await send('Runtime.enable');
+                await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:view==='mobile'});
+                const loaded=once('Page.loadEventFired');
+                await send('Page.navigate',{url:`https://snapspace.click${path}?layoutAudit=20260917-${view}`});
+                await loaded; await sleep(300);
+                const expr=`(()=>{
+                  const vw=innerWidth;
+                  const ignored=e=>e.classList?.contains('ambient')||e.closest?.('.mobile-nav:not(.open)');
+                  const bad=[];
+                  for(const e of document.querySelectorAll('body *')){
+                    const s=getComputedStyle(e); if(s.display==='none'||s.visibility==='hidden'||Number(s.opacity)===0||ignored(e)) continue;
+                    const r=e.getBoundingClientRect(); if(r.width<=0||r.height<=0) continue;
+                    const internal=e.clientWidth>0&&e.scrollWidth>e.clientWidth+3;
+                    const right=r.right>vw+3 && s.position!=='fixed';
+                    const left=r.left<-3 && s.position!=='fixed';
+                    if(internal||right||left){
+                      bad.push({tag:e.tagName,cls:String(e.className||'').slice(0,100),text:String(e.textContent||'').trim().replace(/\\s+/g,' ').slice(0,120),clientWidth:e.clientWidth,scrollWidth:e.scrollWidth,left:Math.round(r.left),right:Math.round(r.right),vw});
+                    }
+                  }
+                  return {url:location.href,vw,docScrollWidth:document.documentElement.scrollWidth,bodyScrollWidth:document.body.scrollWidth,bad:bad.slice(0,30)};
+                })()`;
+                const out=await send('Runtime.evaluate',{expression:expr,returnByValue:true});
+                return out.result.value;
+              });
+              report.push({view,width,height,path,...result});
+              console.log(`VIEW=${view} PATH=${path} DOC=${result.docScrollWidth}/${result.vw} BAD=${result.bad.length}`);
+              for(const b of result.bad) console.log('  OVERFLOW',JSON.stringify(b));
+              await fetch(`http://127.0.0.1:9222/json/close/${target.id}`);
+            }
+          }
+          fs.writeFileSync('audit-layout/layout.json',JSON.stringify(report,null,2));
+          const actionable=report.filter(x=>x.bad.length||x.docScrollWidth>x.vw+3);
+          fs.writeFileSync('audit-layout/summary.txt',`actionable=${actionable.length}\n`+actionable.map(x=>`${x.view} ${x.path} bad=${x.bad.length} doc=${x.docScrollWidth}/${x.vw}`).join('\n')+'\n');
+          console.log('ACTIONABLE_LAYOUT_CASES',actionable.length);
+          proc.kill('SIGTERM');
+          JS
+          node audit-layout/layout.mjs
+          cat audit-layout/summary.txt
+
+      - name: Upload layout audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapspace-layout-audit-20260917
+          path: audit-layout/
+          if-no-files-found: error
