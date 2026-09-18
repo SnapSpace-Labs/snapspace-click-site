@@ -19,6 +19,7 @@ Evidence cutoff: **2026-09-12**. This is a disclosure-safe public derivative of 
 | Institutional rule profile | QUALIFIED / EXTERNAL REALITY PENDING | Frozen offline public-rule profile only. |
 | Critical-infrastructure information | QUALIFIED — NON-ACTUATING SOFTWARE/API | Tested non-actuating information/API profiles only. |
 | Agent/software execution | QUALIFIED — BOUNDED LOCAL SOFTWARE | Public result only; operational source details withheld. |
+| Autonomous mission systems | QUALIFIED — SOFTWARE/SITL/SIH ONLY | Bounded SnapBurst/Swarm + ZipComms mission-control evidence; no physical-aircraft, HITL, operational BVLOS or regulatory qualification. |
 | Physical autonomy | QUALIFIED — PHYSICAL SIMULATOR ONLY | Software + physical simulator only. |
 | Mission-control software | QUALIFIED — SOFTWARE/SIL ONLY | Bounded software/SIL mission control; no physical-effect claim. |
 | Legacy REST durability | SOURCE VERIFIED / NOT QUALIFIED for restart-durable or durable exactly-once claims | Public restart-durable / durable exactly-once claim withheld pending stronger implementation and qualification. |
