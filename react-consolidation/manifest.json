@@ -1,0 +1,11 @@
+{
+  "file": "snapspace-react-consolidation-20260920.zip",
+  "bytes": 77696,
+  "sha256": "e23c708cba5cc3145e37c61ebb5729f59f068f31b933848a07ed9d9f36631c20",
+  "chunks": 2,
+  "chunk_size": 48000,
+  "chunk_sha256": [
+    "58a800cb7e63c82bb0e70025c45591bfb211235bb5b82f97e0720304dc983680",
+    "e7b8139e3c26b32e508d53e9fe54f553bd8f0119d46742ad1066490c0e16b64c"
+  ]
+}
