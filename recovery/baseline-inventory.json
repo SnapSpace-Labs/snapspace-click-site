@@ -1,0 +1,71 @@
+{
+  "source": "github-pages-latest.zip/artifact.tar",
+  "GitHub_main": "99ee74553a653bfba6e456a2b40dccab2a05274f",
+  "eight_pages": [
+    {
+      "page": "Home",
+      "file": "index.html",
+      "git_blob_sha": "7d19218017546f6be99212622de8cf1a999f5661",
+      "sha256": "f3f9c5c641b32e4505b06a8f28b692a24029e485929ba8b090616746fc5d7e04",
+      "h1": "Control the consequence, not the intelligence.",
+      "sections": 8
+    },
+    {
+      "page": "Platform",
+      "file": "platform/index.html",
+      "git_blob_sha": "c5aaa708ea3211c24eaf98337ee92f4ccf82a96f",
+      "sha256": "a443f33b4c08a7601460894d8d79e6b95685e5cc97de539c3e25efe7b6b2ae39",
+      "h1": "Policies become controls. Approvals gate actions. Authority stays bounded through execution.",
+      "sections": 4
+    },
+    {
+      "page": "Proof",
+      "file": "proof/index.html",
+      "git_blob_sha": "1d4b304294510256c79c288a60fb7aa22f921949",
+      "sha256": "555db511bd8be45f010d91e49cb42120f33289c0724288f0738bcf7dc4704c07",
+      "h1": "Qualification at system scale, not a wall of isolated test counters.",
+      "sections": 3
+    },
+    {
+      "page": "Architecture",
+      "file": "architecture/index.html",
+      "git_blob_sha": "5ca23aeea5363f5a7a5390262773f514b53dcfec",
+      "sha256": "db78fa5ec4c4b64bd034e80f9f79419aa5b61bca3b4ec91c1f93429834bf5053",
+      "h1": "A control plane between AI intent and real-world consequence.",
+      "sections": 3
+    },
+    {
+      "page": "Domains",
+      "file": "domains/index.html",
+      "git_blob_sha": "26d32bccc0e6a247aca90325ccf37ecbf52c022a",
+      "sha256": "c6fbbc2060db1a5182a532bf3ebace24178a466581ce8b5e2114dd4586a25164",
+      "h1": "One consequence-control model, qualified across very different operating boundaries.",
+      "sections": 1
+    },
+    {
+      "page": "Developers",
+      "file": "developers/index.html",
+      "git_blob_sha": "fe293e079d4b2b7a4dce6b00f0eeff414a7ea986",
+      "sha256": "452a08d175d2f27eb69dcfdaf7b6f2ae4714827db8ea87c5d678ed892eda6c09",
+      "h1": "Integrate the control contract without inventing authority.",
+      "sections": 5
+    },
+    {
+      "page": "Research",
+      "file": "research/index.html",
+      "git_blob_sha": "4886cb65fc3efa204b93c74e910149b6c68e212b",
+      "sha256": "46228ced945973ab8e99a50725a4e3d1ce9293cfe688582fad3879ed141a8041",
+      "h1": "The unresolved questions stay visible.",
+      "sections": 1
+    },
+    {
+      "page": "Company",
+      "file": "company/index.html",
+      "git_blob_sha": "d75269906eb64b48d295c5a90f13571793ceb676",
+      "sha256": "a74e8ee2563f6ba81a84d3325009914629275a05607dcf7b13f61dabb0119cbb",
+      "h1": "Independent engineering for consequential AI control.",
+      "sections": 3
+    }
+  ],
+  "total_files": 143
+}
