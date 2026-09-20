@@ -1,0 +1,27 @@
+(()=>{
+'use strict';
+const menu=document.querySelector('.menu-toggle');const nav=document.querySelector('.nav');
+if(menu&&nav){menu.addEventListener('click',()=>{const open=menu.getAttribute('aria-expanded')!=='true';menu.setAttribute('aria-expanded',String(open));nav.classList.toggle('open',open)});nav.addEventListener('click',e=>{if(e.target.closest('a')){menu.setAttribute('aria-expanded','false');nav.classList.remove('open')}});document.addEventListener('keydown',e=>{if(e.key==='Escape'){menu.setAttribute('aria-expanded','false');nav.classList.remove('open')}})}
+const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
+const C=['intent','authority','execution','evidence'];
+const normalSteps=[{at:600,node:'intent',label:'Intent admitted',fraction:.14},{at:1700,node:'authority',label:'Authority established',fraction:.43},{at:2800,node:'execution',label:'Execution active',fraction:.7},{at:3900,node:'evidence',label:'Evidence received',fraction:1},{at:4800,label:'Settled / complete',fraction:1}];
+const stopSteps=[{at:600,node:'intent',label:'Intent admitted',fraction:.14},{at:1600,node:'authority',label:'Authority established',fraction:.43},{at:2600,node:'execution',label:'Execution active',fraction:.7},{at:3050,stop:true,label:'STOP — downstream inactive',fraction:.68}];
+const platformSteps=[{at:600,node:'intent',label:'Intent admitted',fraction:.14},{at:1500,node:'authority',label:'Authority established',fraction:.43},{at:2300,node:'execution',label:'Execution active',fraction:.7},{at:3100,stop:true,label:'STOP — consequential path interrupted',fraction:.68},{at:3900,receipt:true,label:'STOP receipt / no downstream execution',fraction:.68},{at:5400,receipt:true,label:'Interruption trace resolved',fraction:.68},{at:6200,receipt:true,label:'Settled / downstream inactive',fraction:.68}];
+const controllers=[];
+function controller(root){let raf=0,start=0,mode='normal',last=-1,finished=false,interrupted=false;
+ const status=root.querySelector('.motion-status');const fill=root.querySelector('.motion-fill');const nodes=Object.fromEntries(C.map(n=>[n,root.querySelector(`[data-node="${n}"]`)]));
+ function present(label,fraction,flags={}){status.textContent=label;fill.style.width=`${Math.min(86,Math.max(0,fraction*86))}%`;root.classList.toggle('is-stopped',!!flags.stopped);root.classList.toggle('is-settled',!!flags.settled);for(const [n,node] of Object.entries(nodes)){node.classList.toggle('is-interrupted',!!flags.stopped&&n==='execution');if(flags.reset)node.classList.remove('is-active')}}
+ function reset(){cancelAnimationFrame(raf);raf=0;last=-1;finished=false;interrupted=false;present('Inactive',0,{reset:true});}
+ function interrupt(label='STOP — downstream inactive'){cancelAnimationFrame(raf);raf=0;finished=true;interrupted=true;const fraction=Math.min(.68,Math.max(.14,Number.parseFloat(fill.style.width||'0')/86));present(label,fraction,{stopped:true,settled:true});nodes.evidence.classList.remove('is-active');}
+ function render(t){const steps=mode==='stop'?stopSteps:mode==='platform'?platformSteps:normalSteps;while(last+1<steps.length&&t>=steps[last+1].at){const step=steps[++last];if(step.stop){interrupted=true;present(step.label,step.fraction,{stopped:true});nodes.evidence.classList.remove('is-active')}else if(step.receipt){present(step.label,step.fraction,{stopped:true,settled:step.at>=6200})}else{if(step.node)nodes[step.node].classList.add('is-active');present(step.label,step.fraction,{settled:step.at===4800})}}if(t>=(mode==='normal'?5500:mode==='stop'?5500:7500)){finished=true;cancelAnimationFrame(raf);raf=0;if(interrupted)present(mode==='platform'?'Settled / STOP receipt; downstream inactive':'STOP — downstream inactive',.68,{stopped:true,settled:true});else present('Settled / complete',1,{settled:true})}}
+ function tick(now){if(finished||reduced.matches)return;render(now-start);if(!finished)raf=requestAnimationFrame(tick)}
+ function run(requested='normal'){reset();mode=requested;root.dataset.mode=mode;if(reduced.matches){finished=true;if(mode==='normal'){C.forEach(n=>nodes[n].classList.add('is-active'));present('Settled / complete',1,{settled:true})}else{['intent','authority','execution'].forEach(n=>nodes[n].classList.add('is-active'));interrupted=true;finished=true;present('STOP — downstream inactive',.68,{stopped:true,settled:true})}return}start=performance.now();raf=requestAnimationFrame(tick)}
+ root.querySelector('[data-motion-replay]')?.addEventListener('click',()=>run('normal'));
+ root.querySelector('[data-motion-demo-stop]')?.addEventListener('click',()=>run('stop'));
+ root.querySelector('[data-motion-stop]')?.addEventListener('click',()=>interrupt());
+ const initial=root.dataset.motion==='platform'?'platform':'normal';run(initial);
+ return {run,stop:interrupt,reset,get state(){return {mode,finished,interrupted,active:C.filter(n=>nodes[n].classList.contains('is-active')),status:status.textContent}}};}
+ document.querySelectorAll('[data-motion]').forEach(e=>controllers.push(controller(e)));
+ window.SnapSpaceMotion={controllers};
+ if('IntersectionObserver'in window&&!reduced.matches){const seen=new IntersectionObserver(entries=>{for(const item of entries)if(item.isIntersecting){item.target.classList.add('is-visible');seen.unobserve(item.target)}},{threshold:.12});document.querySelectorAll('.landscape-line,.architecture-art,.proof-feature').forEach(e=>seen.observe(e))}
+})()
