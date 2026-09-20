@@ -2,7 +2,7 @@
 
 ## What this branch is
 
-**Foundation:** the near-finished GitHub Pages site at `main` commit `99ee74553a653bfba6e456a2b40dccab2a05274f`. The eight page HTML files in the verified GitHub Pages artifact are byte-for-byte Git blob matches for this commit; see `baseline-inventory.json`.
+**Foundation:** the near-finished GitHub Pages site at `main` commit `99ee74553a653bfba6e456a2b40dccab2a05274f`. All eight page HTML files in the saved GitHub Pages artifact were verified against the matching blobs in this branch; see `baseline-inventory.json`.
 
 **This is a recovery and fidelity branch, not a new website.** Preserve the original page content, site structure, P10 evidence / domain claims, supporting URLs and existing navigation. Changes to the visual presentation must be measured against the approved fifth-iteration board, not invented. No production deploy or Replit action is part of this branch's preparation.
 
@@ -10,9 +10,8 @@
 
 ## References captured unchanged
 
-- `approved-eight-page-board.png.b64`: base64 encoding of the exact reference PNG, **not a remade design**. SHA-256 after decoding: `01e494d1291a54f9ff5c968296e82ee468f38f681d6c631f1d8862d65e97d18f`.
-- `motion-system-board-reference.jpg.b64`: base64 of the reference JPG. SHA-256 after decoding: `152c90f3bcab2a2ee34602af5bbf52e492d9f5cffaab7ace62adc5643ca25ba2`.
-- `restore_references.py` decodes both files, validates the hashes and writes image files locally. Encoding is for GitHub's text-file-only upload conduit; the decoded bytes match the originals exactly.
+- `approved-eight-page-board.png`: the exact reference PNG, **not a remade design**. SHA-256: `01e494d1291a54f9ff5c968296e82ee468f38f681d6c631f1d8862d65e97d18f`.
+- `motion-system-board-reference.jpg`: the exact reference JPG. SHA-256: `152c90f3bcab2a2ee34602af5bbf52e492d9f5cffaab7ace62adc5643ca25ba2`.
 - `MOTION_SPEC.md`: supplied motion timings for normal, STOP and Platform. The **original approved playable MP4s are not in this recovered archive**, and the motion reference JPG does not replace them.
 
 ## Original baseline versus final intended visual design
