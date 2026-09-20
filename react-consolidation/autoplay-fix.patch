@@ -1,0 +1,41 @@
+--- previous/InteractiveFlow.tsx
++++ fixed/InteractiveFlow.tsx
+@@ -2,7 +2,7 @@
+ import type { CSSProperties } from 'react';
+ 
+ /** SnapSpace visual demonstration only. Do not connect this to a real decision gate. */
+-type Mode = 'normal' | 'stop' | 'platform';
++export type Mode = 'normal' | 'stop' | 'platform';
+ type Stage = 'intent' | 'authority' | 'execution' | 'evidence';
+ type Phase = 'inactive' | Stage | 'interrupted' | 'receipt' | 'settled';
+ export type FlowSnapshot = {
+@@ -42,7 +42,7 @@
+ const stages: Stage[] = ['intent', 'authority', 'execution', 'evidence'];
+ const stepsByMode: Record<Mode, Step[]> = { normal, stop: interrupted, platform };
+ 
+-export function useGovernedFlow(initialMode: Mode = 'platform') {
++export function useGovernedFlow(initialMode: Mode = 'platform', autoPlay = true) {
+   const [state, setState] = useState<FlowSnapshot>(() => initial(initialMode));
+   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+   const generation = useRef(0);
+@@ -88,14 +88,16 @@
+     reducedMotion.current = mq.matches;
+     const onChange = (event: MediaQueryListEvent) => { reducedMotion.current = event.matches; if (event.matches) cancel(); };
+     mq.addEventListener?.('change', onChange);
+-    play(initialMode);
++    if (autoPlay) play(initialMode);
++    else { cancel(); setState(initial(initialMode)); }
+     return () => { cancel(); mq.removeEventListener?.('change', onChange); };
+-  }, [initialMode, play, cancel]);
++  }, [initialMode, autoPlay, play, cancel]);
+   return { state, play, stop };
+ }
+ 
+-export default function InteractiveFlow({ mode = 'platform' }: { mode?: Mode }) {
+-  const { state, play, stop } = useGovernedFlow(mode);
++export type InteractiveFlowProps = { mode?: Mode; autoPlay?: boolean };
++export default function InteractiveFlow({ mode = 'platform', autoPlay = true }: InteractiveFlowProps) {
++  const { state, play, stop } = useGovernedFlow(mode, autoPlay);
+   return (
+     <section className="snapspace-flow" aria-label="Illustrative governed progression" data-phase={state.phase} data-interrupted={state.interrupted}>
+       <div className="snapspace-flow__top"><span>GOVERNED STATE / VISUAL DEMONSTRATION</span><span role="status" aria-live="polite" aria-atomic="true">{state.message}</span></div>
