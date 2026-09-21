@@ -1,0 +1,24 @@
+/* SnapSpace visual recovery — additive presentation layer; existing content remains authoritative. */
+:root{color-scheme:dark;--ss-ink:#eaf8ff;--ss-cyan:#61e6e9;--ss-deep:#040e1c}
+html{scroll-behavior:smooth}body{background:radial-gradient(ellipse at 80% 0%,#143955 0%,transparent 45%),linear-gradient(160deg,#07192b,#040b16 65%,#071b2b);color:var(--ss-ink)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background:repeating-linear-gradient(90deg,transparent 0 119px,#70e9f108 120px),repeating-linear-gradient(0deg,transparent 0 119px,#70e9f108 120px);mask-image:linear-gradient(#0005,transparent 85%)}
+.site-header,main,.site-footer{position:relative;z-index:1}
+.site-header{backdrop-filter:blur(22px);background:#061321dc;border-bottom:1px solid #72dbe52c}
+.v2-hero{position:relative;isolation:isolate;min-height:min(780px,90svh);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;overflow:hidden}
+.v2-hero::before{content:"";position:absolute;z-index:-2;width:min(68vw,850px);aspect-ratio:1;right:-12%;top:-22%;border-radius:50%;background:radial-gradient(circle at 29% 28%,#83e4e42e 0%,#205778 29%,#09233b 56%,#020a16 71%);box-shadow:-35px 30px 95px #50cbdc1b,inset 15px 0 45px #b5ffff16;opacity:.9}
+.v2-hero::after{content:"";position:absolute;z-index:-1;inset:15% -8% 5% 28%;border:1px solid #6ddde42b;border-radius:50%;transform:rotate(-25deg) scaleY(.52);box-shadow:0 0 0 25px #60e3ec06,0 0 0 75px #60e3ec04;pointer-events:none}
+.v2-hero h1{max-width:820px;text-wrap:balance;text-shadow:0 5px 45px #030a16}
+.v2-hero h1 em{color:#a7f7f3}
+.v2-hero-lede,.v2-hero-detail{max-width:690px}
+.v2-now,.v2-control,.v2-proof,.v2-domains,.v2-difference,.v2-sovereign,.v2-close{position:relative;border-top:1px solid #6fdce32a}
+.v2-now::before,.v2-sovereign::before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,#163b4b35,transparent 70%)}
+.section-index,.eyebrow{letter-spacing:.16em;color:#8ee9ec}
+.v2-flow{border:1px solid #60dce24a;background:linear-gradient(100deg,#0b2639cc,#06142199);box-shadow:0 0 55px #29c8d412}
+.v2-control-grid article,.v2-proof-grid article,.v2-domain-grid article{border-color:#72dbe52b;background:linear-gradient(145deg,#12304765,#07142145)}
+.v2-control-grid article:nth-child(2){border-color:#f17a7a55}
+.v2-control-grid article:nth-child(2) h3{color:#ff8585}
+.button-primary{background:#91e9eb;color:#041320}
+.button-secondary{border-color:#78dce66b}
+:focus-visible{outline:2px solid #91e9eb;outline-offset:4px}
+@media(max-width:760px){.v2-hero{min-height:680px;justify-content:flex-end;padding-bottom:72px}.v2-hero::before{width:110vw;right:-38%;top:-10%;opacity:.65}.v2-hero::after{inset:0 -80% 30% 0}.v2-hero h1{font-size:clamp(2.7rem,11vw,5rem)}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
