@@ -46,3 +46,13 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .builder-page:has(.dev-rules) .builder-hero::before{border-radius:0;transform:skew(-20deg) rotate(-12deg);background:repeating-linear-gradient(0deg,#76e5e512 0 1px,transparent 1px 23px);box-shadow:0 0 0 50px #73e5e605}
 .builder-page:has(.dev-rules) .conformance{border-left:2px solid #71e6e6;background:#061321b0}
 @media(max-width:760px){.builder-hero{min-height:530px}.builder-hero::before{width:110vw;right:-55%;top:-8%;opacity:.55}.domain-grid article{min-height:unset}}
+
+/* Editorial layouts for the remaining evidence and institutional pages. */
+.builder-page:has(a[href="/evidence/"]) .builder-hero::before{border-radius:8%;transform:rotate(-18deg) scaleY(.62);background:linear-gradient(135deg,#6ad7e622,#102f45 55%,#071421);box-shadow:0 0 0 35px #71e6e608,0 0 0 90px #71e6e605}
+.builder-page:has(.builder-flow) .builder-flow{position:relative;overflow:hidden}
+.builder-page:has(.builder-flow) .builder-flow::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:1px;background:linear-gradient(90deg,transparent,#76f5f0,transparent)}
+.builder-page:has(.domain-grid) .domain-grid{gap:clamp(12px,2vw,28px)}
+.builder-page .builder-split article{border-top:1px solid #7de4e63b}
+.builder-page .builder-hero>span{font-size:.76rem;text-transform:uppercase}
+.builder-page .builder-hero h1{letter-spacing:-.035em;line-height:1.08}
+@media(min-width:900px){.builder-page .builder-hero{padding-right:22%}.builder-page .builder-hero h1{max-width:900px}}
