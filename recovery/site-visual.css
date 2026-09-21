@@ -109,3 +109,14 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .ss-visual-path__stop{position:relative}
 .ss-visual-path__stop::before{content:"";position:absolute;top:-3px;left:0;width:42px;height:4px;background:#ff9090;box-shadow:0 0 22px #ff6565}
 @media(prefers-reduced-motion:reduce){.ss-visual-path__line::before,.ss-visual-path__line>div{animation:none!important}}
+
+/* Make the recovered Home layout visually substantial above the fold. */
+.v2-home .v2-hero{min-height:760px;padding-block:clamp(110px,13vw,200px)}
+.v2-home .v2-hero h1{font-size:clamp(3.4rem,7.6vw,8rem);line-height:.99;letter-spacing:-.07em;max-width:1050px}
+.v2-home .v2-hero h1 em{display:block;font-style:normal;color:#8cece9}
+.v2-home .v2-hero-lede{font-size:clamp(1.2rem,1.7vw,1.6rem);line-height:1.4;color:#e3f5f7}
+.v2-home .v2-hero-detail{color:#afcbd5;line-height:1.7}
+.v2-home .hero-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px}
+.v2-home .hero-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:14px 22px;text-decoration:none}
+.v2-home .v2-hero::before{width:min(72vw,1000px);right:-16%;top:-17%}
+@media(max-width:760px){.v2-home .v2-hero{min-height:720px;padding-block:130px 80px}.v2-home .v2-hero h1{font-size:clamp(3rem,12vw,5.5rem)}.v2-home .v2-hero::before{width:120vw;right:-48%;top:-8%}}
